@@ -22,7 +22,8 @@ const userSchema = new Schema(
     fullName: {
       type: String,
       required: true,
-      unique: true,
+      trim: true,
+      index: true,
     },
     avatar: {
       type: String, //we will use the link of cloudnary
