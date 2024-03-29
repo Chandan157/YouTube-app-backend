@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { registerUser } from "../controllers/user.controller.js";
+import { loginUser, registerUser } from "../controllers/user.controller.js";
 import { upload } from "./../middlewares/multer.middleware.js";
+import { verifyJWT } from "./../middlewares/auth.middleware";
 
 const router = Router();
 
@@ -12,9 +13,14 @@ router.route("/register").post(
     },
     {
       name: "coverImage",
-      maxCount:1,
+      maxCount: 1,
     },
   ]),
   registerUser
 ); // agar /register hit hoga tab registerUser method call ho jayega
+
+router.route("/login").post(loginUser);
+
+//secured routes
+router.route("/logout").post(verifyJWT, anotherMid, logoutUser);
 export default router;
