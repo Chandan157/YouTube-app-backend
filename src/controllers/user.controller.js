@@ -162,8 +162,8 @@ const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: {
-        refreshToken: undefined,
+      $unset: {
+        refreshToken: 1, //this removes the field from document
       },
     },
     {
@@ -247,7 +247,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 const getCurrentUser = asyncHandler(async (req, res) => {
   return res
     .status(200)
-    .json(200, req.user, "current user fetched successfully");
+    .json(new ApiResponse(200, req.user, "User fetched successfully"));
 });
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
@@ -329,17 +329,15 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
   const { username } = req.params;
 
   if (!username?.trim()) {
-    throw new ApiError(400, "Username is missing");
+    throw new ApiError(400, "username is missing");
   }
 
-  //pahele hum user ko match kiya
   const channel = await User.aggregate([
     {
       $match: {
         username: username?.toLowerCase(),
       },
     },
-    //fir count kiya subscriber kitna hai "channel" k through
     {
       $lookup: {
         from: "subscriptions",
@@ -348,7 +346,6 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         as: "subscribers",
       },
     },
-    //fir humne kitno ko subscribe kiya "subscriber" k through: lookup mean-left outer join
     {
       $lookup: {
         from: "subscriptions",
@@ -357,11 +354,9 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         as: "subscribedTo",
       },
     },
-
-    //do teen fied aur add kiye apne original user Object mai
     {
       $addFields: {
-        subsccribersCount: {
+        subscribersCount: {
           $size: "$subscribers",
         },
         channelsSubscribedToCount: {
@@ -369,19 +364,18 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         },
         isSubscribed: {
           $cond: {
-            if: { $in: [req.user?._id, "subscribers.subscriber"] },
+            if: { $in: [req.user?._id, "$subscribers.subscriber"] },
             then: true,
             else: false,
           },
         },
       },
     },
-    //abhi selective chizo ko project karenge
     {
       $project: {
         fullName: 1,
         username: 1,
-        subsccribersCount: 1,
+        subscribersCount: 1,
         channelsSubscribedToCount: 1,
         isSubscribed: 1,
         avatar: 1,
@@ -392,8 +386,9 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
   ]);
 
   if (!channel?.length) {
-    throw new ApiError(404, "Channel does not exists");
+    throw new ApiError(404, "channel does not exists");
   }
+
   return res
     .status(200)
     .json(
