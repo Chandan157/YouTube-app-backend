@@ -330,12 +330,12 @@ const updateVideo = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Please provide the title or description");
   }
 
-  // console.log("videoId :" , videoId)
-  // console.log("title :" , title)
-  // console.log("description :" , description)
-
   // Step2: Get the thumbnail from middleware & get the user detail.
-  const thumbnailPath = req.file?.path;
+  let thumbnailPath;
+  if(req.files !== undefined) {
+    thumbnailPath = req.files?.path;
+    console.log(thumbnailPath);
+  }
   const user = req.user?._id;
 
   // console.log("req.file :" , req.file)
@@ -344,6 +344,7 @@ const updateVideo = asyncHandler(async (req, res) => {
   try {
     // Step3: Find the old video document detail from MongoDB & check that it exist or not.
     const oldVideo = await Video.findById(videoId);
+    console.log(oldVideo);
 
     if (!oldVideo) {
       throw new ApiError(400, "There is no video available with this video ID");
@@ -359,7 +360,7 @@ const updateVideo = asyncHandler(async (req, res) => {
                thumbnail file from Cloudinary.
             */
       let uploadedThumbnail;
-      if (thumbnailPath) {
+      if (thumbnailPath !== undefined) {
         uploadedThumbnail = await uploadOnCloudinary(thumbnailPath);
 
         console.log("uploadedThumbnail :", uploadedThumbnail);
@@ -383,7 +384,7 @@ const updateVideo = asyncHandler(async (req, res) => {
           $set: {
             title: title || oldVideo.title,
             description: description || oldVideo.description,
-            thumbnail: uploadedThumbnail.secure_url || oldVideo.thumbnail,
+            thumbnail: (!uploadedThumbnail) ?  oldVideo.thumbnail : uploadedThumbnail.secure_url,
           },
         },
         { new: true }
@@ -392,6 +393,7 @@ const updateVideo = asyncHandler(async (req, res) => {
       return res.status(200).json(new ApiResponse(200, video, "Video title, "));
     }
   } catch (error) {
+    console.log(error);
     throw new ApiError(500, "Getting error while updating the video.");
   }
 });
